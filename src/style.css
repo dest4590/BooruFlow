@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --color-app-bg: #000000;
+  --color-app-bg-1: #0c0c0c;
+  --color-app-bg-2: #161616;
+  --color-app-bg-3: #202020;
+  --color-app-border: #242424;
+  --color-app-border-deep: #363636;
+  --color-app-text: #f0f0f0;
+  --color-app-text-muted: #888888;
+  --color-app-text-dim: #505050;
+  
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  :root {
+    --c-bg: var(--color-app-bg);
+    --c-bg-1: var(--color-app-bg-1);
+    --c-bg-2: var(--color-app-bg-2);
+    --c-bg-3: var(--color-app-bg-3);
+    --c-border: var(--color-app-border);
+    --c-border-2: var(--color-app-border-deep);
+    --c-text: var(--color-app-text);
+    --c-text-2: var(--color-app-text-muted);
+    --c-text-3: var(--color-app-text-dim);
+    color-scheme: dark;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    background: var(--c-bg);
+    color: var(--c-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Typographic defaults */
+    -webkit-text-size-adjust: 100%;
+    font-size: 16px; /* base for rem scale */
+    line-height: 1.5;
+    -webkit-font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer utilities {
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  /* Readable content container */
+  .prose {
+    max-width: 65ch;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--c-text);
+  }
+
+  /* Type scale */
+  .type-xl { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; }
+  .type-lg { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; }
+  .type-base { font-size: 1rem; font-weight: 400; }
+  .type-sm { font-size: 0.875rem; font-weight: 400; color: var(--c-text-2); }
+
+  /* Headings */
+  h1 { font-size: 1.75rem; line-height: 1.15; margin: 0 0 0.5rem 0; font-weight: 700; }
+  h2 { font-size: 1.25rem; line-height: 1.2; margin: 0 0 0.5rem 0; font-weight: 600; }
+  h3 { font-size: 1.125rem; line-height: 1.25; margin: 0 0 0.5rem 0; font-weight: 600; }
+
+  p { margin: 0 0 1rem 0; }
+
+  /* Buttons and controls: improve legibility */
+  button, input, select, textarea {
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  /* Small caps-ish for metadata */
+  .meta { text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.08em; color: var(--c-text-2); }
+}
