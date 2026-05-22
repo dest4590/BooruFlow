@@ -25,7 +25,7 @@ Quick features
 
 Getting started (user)
 
-Just navigate to: https://dest4590.github.io/booruflow/
+Just navigate to: https://dest4590.github.io/BooruFlow/
 
 Getting started (developer)
 
