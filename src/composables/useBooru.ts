@@ -1,5 +1,5 @@
 import type { BooruMode } from "./useSettings";
-import { excludeAi } from "./useSettings";
+import { excludeAi, rule34ApiKey, rule34UserId } from "./useSettings";
 
 export interface BooruPost {
   id: number;
@@ -93,8 +93,14 @@ const ENDPOINTS = {
 
 const CORS_PROXY = "https://corsproxy.io/?";
 
-const RULE34_API_KEY = import.meta.env.VITE_RULE34_API_KEY?.trim() ?? "";
-const RULE34_USER_ID = import.meta.env.VITE_RULE34_USER_ID?.trim() ?? "";
+// Use runtime-configurable values from settings (persisted in localStorage)
+function getRule34Key() {
+  return rule34ApiKey.value?.trim() ?? "";
+}
+
+function getRule34UserId() {
+  return rule34UserId.value?.trim() ?? "";
+}
 
 async function fetchWithCors(url: string): Promise<Response> {
   try {
@@ -121,11 +127,13 @@ async function safeJsonParse<T>(res: Response): Promise<T | null> {
 }
 
 function withRule34Auth(url: string): string {
-  if (!RULE34_API_KEY || !RULE34_USER_ID) return url;
+  const apiKey = getRule34Key();
+  const userId = getRule34UserId();
+  if (!apiKey || !userId) return url;
 
   const next = new URL(url);
-  next.searchParams.set("api_key", RULE34_API_KEY);
-  next.searchParams.set("user_id", RULE34_USER_ID);
+  next.searchParams.set("api_key", apiKey);
+  next.searchParams.set("user_id", userId);
   return next.toString();
 }
 

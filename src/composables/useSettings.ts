@@ -7,6 +7,8 @@ interface Settings {
   recentSearches: string[];
   alwaysLoadHighRes: boolean;
   excludeAi: boolean;
+  rule34ApiKey?: string;
+  rule34UserId?: string;
 }
 
 const STORAGE_KEY = "booruflow_settings";
@@ -24,6 +26,8 @@ function loadSettings(): Settings {
           : [],
         alwaysLoadHighRes: parsed.alwaysLoadHighRes === true,
         excludeAi: parsed.excludeAi !== false,
+        rule34ApiKey: typeof parsed.rule34ApiKey === "string" ? parsed.rule34ApiKey : "",
+        rule34UserId: typeof parsed.rule34UserId === "string" ? parsed.rule34UserId : "",
       };
       persistSettings(next);
       return next;
@@ -48,21 +52,25 @@ const mode = ref<BooruMode>(initial.mode);
 const recentSearches = ref<string[]>(initial.recentSearches);
 const alwaysLoadHighRes = ref<boolean>(initial.alwaysLoadHighRes);
 const excludeAi = ref<boolean>(initial.excludeAi);
+const rule34ApiKey = ref<string>(initial.rule34ApiKey ?? "");
+const rule34UserId = ref<string>(initial.rule34UserId ?? "");
 
 watch(
-  [mode, recentSearches, alwaysLoadHighRes, excludeAi],
+  [mode, recentSearches, alwaysLoadHighRes, excludeAi, rule34ApiKey, rule34UserId],
   ([m, r, h, a]) => {
     persistSettings({
       mode: m,
       recentSearches: r,
       alwaysLoadHighRes: h,
       excludeAi: a,
+      rule34ApiKey: rule34ApiKey.value,
+      rule34UserId: rule34UserId.value,
     });
   },
   { deep: true },
 );
 
-export { mode, recentSearches, alwaysLoadHighRes, excludeAi };
+export { mode, recentSearches, alwaysLoadHighRes, excludeAi, rule34ApiKey, rule34UserId };
 
 export function useSettings() {
   function addRecentSearch(query: string): void {
@@ -84,10 +92,18 @@ export function useSettings() {
     recentSearches.value = [];
   }
 
+  function setRule34Credentials(apiKey: string, userId: string) {
+    rule34ApiKey.value = apiKey.trim();
+    rule34UserId.value = userId.trim();
+  }
+
   return {
     mode,
     recentSearches,
     addRecentSearch,
     clearRecentSearches,
+    rule34ApiKey,
+    rule34UserId,
+    setRule34Credentials,
   };
 }
