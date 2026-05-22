@@ -2,7 +2,7 @@
 import type { BooruMode } from "@/composables/useSettings";
 import BaseSegmentedControl from "./BaseSegmentedControl.vue";
 import { ref, onMounted, onUnmounted } from "vue";
-import { X } from "lucide-vue-next";
+import { X } from "@lucide/vue";
 
 export interface Filters {
   sort: "default" | "score" | "random";

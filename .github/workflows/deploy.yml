@@ -25,13 +25,14 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      - run: |
+          npm ci --include=dev || npm install
 
       - name: Type check
         run: npm run type-check
 
       - name: Build
-        run: vite build
+        run: npm run build
         env:
           NODE_ENV: production
 
