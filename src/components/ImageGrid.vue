@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, toRef } from "vue";
+import { ref, computed, toRef, onMounted, onBeforeUnmount } from "vue";
 import type { BooruMode } from "../composables/useSettings";
 import { alwaysLoadHighRes } from "../composables/useSettings";
 import type { BooruPost } from "../composables/useBooru";
@@ -92,6 +92,29 @@ function nextLightbox() {
 
 const loadingVisible = computed(() => loaded.value);
 
+const sentinel = ref<HTMLElement | null>(null);
+let observer: IntersectionObserver | null = null;
+
+onMounted(() => {
+  if (!sentinel.value) return;
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && props.hasMore && !props.loading) {
+          emit("load-more");
+        }
+      }
+    },
+    { root: null, rootMargin: "600px", threshold: 0 }
+  );
+  observer.observe(sentinel.value);
+});
+
+onBeforeUnmount(() => {
+  if (observer && sentinel.value) observer.unobserve(sentinel.value);
+  observer = null;
+});
+
 function getImageSrc(post: BooruPost): string {
   return alwaysLoadHighRes.value
     ? post.file_url
@@ -175,6 +198,9 @@ function isVideoOrGif(post: BooruPost): boolean {
         </div>
       </div>
     </div>
+
+    <!-- infinite-scroll sentinel -->
+    <div ref="sentinel" class="w-full h-1" aria-hidden="true"></div>
 
     <div v-if="posts.length > 0" class="flex justify-center mt-12 mb-8">
       <button
