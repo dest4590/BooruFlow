@@ -8,6 +8,17 @@ export interface UrlParams {
   alwaysLoadHighRes?: boolean;
 }
 
+function migrateUrlMode(mode: string | null): BooruMode | undefined {
+  if (!mode) return undefined;
+  if (mode === "nsfw") return "rule34";
+  if (mode === "sfw") return "safebooru";
+  const validModes: BooruMode[] = ["safebooru", "rule34", "gelbooru", "e621"];
+  if (validModes.includes(mode as BooruMode)) {
+    return mode as BooruMode;
+  }
+  return undefined;
+}
+
 export function useUrlParams() {
   const currentParams = ref<UrlParams>({});
 
@@ -20,8 +31,8 @@ export function useUrlParams() {
       result.tags = tagsParam.split(",").filter(Boolean);
     }
 
-    const mode = params.get("mode");
-    if (mode === "sfw" || mode === "nsfw") {
+    const mode = migrateUrlMode(params.get("mode"));
+    if (mode) {
       result.mode = mode;
     }
 

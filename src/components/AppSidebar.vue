@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { X as CloseIcon, Settings, SlidersHorizontal, Share2 } from "@lucide/vue";
 import SearchBar from "./SearchBar.vue";
-import SfwToggle from "./SfwToggle.vue";
+import SourceSelector from "./SourceSelector.vue";
 import type { BooruMode } from "../composables/useSettings";
 
 defineProps<{
@@ -61,12 +61,12 @@ const emit = defineEmits<{
         </section>
 
         <section class="space-y-4">
-          <div class="flex items-center justify-between px-1">
+          <div class="px-1">
             <label
-              class="text-[10px] font-bold uppercase tracking-widest text-app-text-dim"
-              >Mode</label
+              class="text-[10px] font-bold uppercase tracking-widest text-app-text-dim mb-3 block"
+              >Source</label
             >
-            <SfwToggle
+            <SourceSelector
               :model-value="mode"
               @update:model-value="$emit('update:mode', $event)"
             />

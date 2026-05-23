@@ -1,6 +1,20 @@
 import { ref, watch } from "vue";
 
-export type BooruMode = "sfw" | "nsfw";
+export type BooruMode = "safebooru" | "rule34" | "gelbooru" | "e621";
+
+export const SOURCE_DISPLAY_NAMES: Record<BooruMode, string> = {
+  safebooru: "SafeBooru",
+  rule34: "Rule34",
+  gelbooru: "Gelbooru",
+  e621: "e621",
+};
+
+export const SOURCE_CATEGORIES: Record<BooruMode, "sfw" | "nsfw"> = {
+  safebooru: "sfw",
+  rule34: "nsfw",
+  gelbooru: "nsfw",
+  e621: "nsfw",
+};
 
 interface Settings {
   mode: BooruMode;
@@ -9,10 +23,25 @@ interface Settings {
   excludeAi: boolean;
   rule34ApiKey?: string;
   rule34UserId?: string;
+  gelbooruApiKey?: string;
+  gelbooruUserId?: string;
 }
 
 const STORAGE_KEY = "booruflow_settings";
 const MAX_RECENT_SEARCHES = 10;
+
+function migrateOldMode(oldMode: unknown): BooruMode {
+  if (oldMode === "nsfw") return "rule34";
+  if (oldMode === "sfw") return "safebooru";
+  const validModes: BooruMode[] = ["safebooru", "rule34", "gelbooru", "e621"];
+  if (
+    typeof oldMode === "string" &&
+    validModes.includes(oldMode as BooruMode)
+  ) {
+    return oldMode as BooruMode;
+  }
+  return "safebooru";
+}
 
 function loadSettings(): Settings {
   try {
@@ -20,21 +49,31 @@ function loadSettings(): Settings {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>;
       const next: Settings = {
-        mode: parsed.mode === "nsfw" ? "nsfw" : "sfw",
+        mode: migrateOldMode(parsed.mode),
         recentSearches: Array.isArray(parsed.recentSearches)
           ? parsed.recentSearches.slice(0, MAX_RECENT_SEARCHES)
           : [],
         alwaysLoadHighRes: parsed.alwaysLoadHighRes === true,
         excludeAi: parsed.excludeAi !== false,
-        rule34ApiKey: typeof parsed.rule34ApiKey === "string" ? parsed.rule34ApiKey : "",
-        rule34UserId: typeof parsed.rule34UserId === "string" ? parsed.rule34UserId : "",
+        rule34ApiKey:
+          typeof parsed.rule34ApiKey === "string" ? parsed.rule34ApiKey : "",
+        rule34UserId:
+          typeof parsed.rule34UserId === "string" ? parsed.rule34UserId : "",
+        gelbooruApiKey:
+          typeof parsed.gelbooruApiKey === "string"
+            ? parsed.gelbooruApiKey
+            : "",
+        gelbooruUserId:
+          typeof parsed.gelbooruUserId === "string"
+            ? parsed.gelbooruUserId
+            : "",
       };
       persistSettings(next);
       return next;
     }
   } catch {}
   const fallback: Settings = {
-    mode: "sfw",
+    mode: "safebooru",
     recentSearches: [],
     alwaysLoadHighRes: false,
     excludeAi: true,
@@ -54,9 +93,20 @@ const alwaysLoadHighRes = ref<boolean>(initial.alwaysLoadHighRes);
 const excludeAi = ref<boolean>(initial.excludeAi);
 const rule34ApiKey = ref<string>(initial.rule34ApiKey ?? "");
 const rule34UserId = ref<string>(initial.rule34UserId ?? "");
+const gelbooruApiKey = ref<string>(initial.gelbooruApiKey ?? "");
+const gelbooruUserId = ref<string>(initial.gelbooruUserId ?? "");
 
 watch(
-  [mode, recentSearches, alwaysLoadHighRes, excludeAi, rule34ApiKey, rule34UserId],
+  [
+    mode,
+    recentSearches,
+    alwaysLoadHighRes,
+    excludeAi,
+    rule34ApiKey,
+    rule34UserId,
+    gelbooruApiKey,
+    gelbooruUserId,
+  ],
   ([m, r, h, a]) => {
     persistSettings({
       mode: m,
@@ -65,12 +115,23 @@ watch(
       excludeAi: a,
       rule34ApiKey: rule34ApiKey.value,
       rule34UserId: rule34UserId.value,
+      gelbooruApiKey: gelbooruApiKey.value,
+      gelbooruUserId: gelbooruUserId.value,
     });
   },
   { deep: true },
 );
 
-export { mode, recentSearches, alwaysLoadHighRes, excludeAi, rule34ApiKey, rule34UserId };
+export {
+  mode,
+  recentSearches,
+  alwaysLoadHighRes,
+  excludeAi,
+  rule34ApiKey,
+  rule34UserId,
+  gelbooruApiKey,
+  gelbooruUserId,
+};
 
 export function useSettings() {
   function addRecentSearch(query: string): void {
@@ -97,6 +158,11 @@ export function useSettings() {
     rule34UserId.value = userId.trim();
   }
 
+  function setGelbooruCredentials(apiKey: string, userId: string) {
+    gelbooruApiKey.value = apiKey.trim();
+    gelbooruUserId.value = userId.trim();
+  }
+
   return {
     mode,
     recentSearches,
@@ -104,6 +170,9 @@ export function useSettings() {
     clearRecentSearches,
     rule34ApiKey,
     rule34UserId,
+    gelbooruApiKey,
+    gelbooruUserId,
     setRule34Credentials,
+    setGelbooruCredentials,
   };
 }

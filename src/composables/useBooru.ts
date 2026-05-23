@@ -1,5 +1,11 @@
 import type { BooruMode } from "./useSettings";
-import { excludeAi, rule34ApiKey, rule34UserId } from "./useSettings";
+import {
+  excludeAi,
+  rule34ApiKey,
+  rule34UserId,
+  gelbooruApiKey,
+  gelbooruUserId,
+} from "./useSettings";
 
 export interface BooruPost {
   id: number;
@@ -78,22 +84,34 @@ export const CATEGORY_COLORS: Record<TagCategory, { text: string }> = {
   other: { text: "#71717a" },
 };
 
-const ENDPOINTS = {
-  sfw: {
+const ENDPOINTS: Record<
+  BooruMode,
+  { posts: string; autocomplete: string; tags?: string }
+> = {
+  safebooru: {
     posts: "https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1",
     autocomplete: "https://safebooru.org/autocomplete.php",
     tags: "https://safebooru.org/index.php?page=dapi&s=tag&q=index&json=1",
   },
-  nsfw: {
+  rule34: {
     posts: "https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1",
     autocomplete: "https://api.rule34.xxx/autocomplete.php",
     tags: "https://api.rule34.xxx/index.php?page=dapi&s=tag&q=index&json=1",
+  },
+  gelbooru: {
+    posts: "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1",
+    autocomplete: "https://gelbooru.com/autocomplete.php",
+    tags: "https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1",
+  },
+  e621: {
+    posts: "https://e621.net/posts.json",
+    autocomplete: "https://e621.net/autocomplete.json?search[type]=tag_query",
+    tags: "https://e621.net/tags.json",
   },
 } as const;
 
 const CORS_PROXY = "https://corsproxy.io/?";
 
-// Use runtime-configurable values from settings (persisted in localStorage)
 function getRule34Key() {
   return rule34ApiKey.value?.trim() ?? "";
 }
@@ -102,12 +120,20 @@ function getRule34UserId() {
   return rule34UserId.value?.trim() ?? "";
 }
 
+function getGelbooruKey() {
+  return gelbooruApiKey.value?.trim() ?? "";
+}
+
+function getGelbooruUserId() {
+  return gelbooruUserId.value?.trim() ?? "";
+}
+
 async function fetchWithCors(url: string): Promise<Response> {
   try {
     const res = await fetch(url, { mode: "cors" });
     if (res.ok) return res;
     throw new Error(`HTTP ${res.status}`);
-  } catch {
+  } catch (err) {
     const proxied = `${CORS_PROXY}${encodeURIComponent(url)}`;
     const res = await fetch(proxied);
     if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
@@ -126,15 +152,49 @@ async function safeJsonParse<T>(res: Response): Promise<T | null> {
   }
 }
 
-function withRule34Auth(url: string): string {
-  const apiKey = getRule34Key();
-  const userId = getRule34UserId();
-  if (!apiKey || !userId) return url;
+function requiresAuth(mode: BooruMode): boolean {
+  return mode === "rule34" || mode === "gelbooru";
+}
 
-  const next = new URL(url);
-  next.searchParams.set("api_key", apiKey);
-  next.searchParams.set("user_id", userId);
-  return next.toString();
+function isE621Format(mode: BooruMode): boolean {
+  return mode === "e621";
+}
+
+function isDanbooruFormat(mode: BooruMode): boolean {
+  return mode === "safebooru" || mode === "rule34" || mode === "gelbooru";
+}
+
+function normalizePost(post: any, mode: BooruMode): BooruPost {
+  if (isE621Format(mode)) {
+    return {
+      id: post.id,
+      file_url: post.file?.url || post.file?.https?.url || "",
+      preview_url:
+        post.preview?.url ||
+        post.preview?.https?.url ||
+        post.file?.url ||
+        post.file?.https?.url,
+      tags: Object.keys(post.tags || {}).join(" "),
+      rating: (post.rating || "safe") as any,
+      score: post.score?.total || 0,
+      source: post.sources?.join(", "),
+      width: post.file?.width,
+      height: post.file?.height,
+    };
+  } else {
+    return {
+      id: post.id,
+      file_url: post.file_url,
+      preview_url: post.preview_url ?? post.file_url,
+      tags: post.tags,
+      rating: post.rating,
+      score: post.score ?? 0,
+      source: post.source,
+      width: post.width,
+      height: post.height,
+      tag_info: post.tag_info,
+    };
+  }
 }
 
 export async function searchPosts(
@@ -151,36 +211,53 @@ export async function searchPosts(
 
   let finalTags = normalizedTags;
   if (excludeAi.value) {
-    const aiTags =
-      "-ai_generated -ai-generated";
+    const aiTags = "-ai_generated -ai-generated";
     finalTags = finalTags ? `${finalTags} ${aiTags}` : aiTags;
   }
 
-  let baseUrl = `${ENDPOINTS[mode].posts}&tags=${encodeURIComponent(finalTags)}&limit=${limit}&pid=${page}`;
+  let url: string;
 
-  if (mode === "nsfw") {
-    baseUrl += "&fields=tag_info";
+  if (isE621Format(mode)) {
+    const searchParams = new URLSearchParams();
+    searchParams.set("tags", finalTags);
+    searchParams.set("limit", limit.toString());
+    searchParams.set("page", (page + 1).toString());
+    url = `${ENDPOINTS[mode].posts}?${searchParams.toString()}`;
+  } else if (isDanbooruFormat(mode)) {
+    let baseUrl = `${ENDPOINTS[mode].posts}&tags=${encodeURIComponent(finalTags)}&limit=${limit}&pid=${page}`;
+    if (mode === "rule34") {
+      baseUrl += "&fields=tag_info";
+    }
+    url = baseUrl;
+  } else {
+    throw new Error(`Unknown booru mode: ${mode}`);
   }
 
-  const url = mode === "nsfw" ? withRule34Auth(baseUrl) : baseUrl;
+  if (requiresAuth(mode)) {
+    const apiKey = mode === "gelbooru" ? getGelbooruKey() : getRule34Key();
+    const userId =
+      mode === "gelbooru" ? getGelbooruUserId() : getRule34UserId();
+    if (apiKey && userId) {
+      const urlObj = new URL(url);
+      urlObj.searchParams.set("api_key", apiKey);
+      urlObj.searchParams.set("user_id", userId);
+      url = urlObj.toString();
+    } else {
+      return [];
+    }
+  }
 
   const res = await fetchWithCors(url);
   const data = await safeJsonParse<unknown>(res);
 
-  if (!Array.isArray(data)) return [];
-
-  return (data as BooruPost[]).map((post) => ({
-    id: post.id,
-    file_url: post.file_url,
-    preview_url: post.preview_url ?? post.file_url,
-    tags: post.tags,
-    rating: post.rating,
-    score: post.score ?? 0,
-    source: post.source,
-    width: post.width,
-    height: post.height,
-    tag_info: post.tag_info,
-  }));
+  if (isE621Format(mode)) {
+    const e621Data = data as { posts?: any[] };
+    if (!Array.isArray(e621Data?.posts)) return [];
+    return e621Data.posts.map((post) => normalizePost(post, mode));
+  } else {
+    if (!Array.isArray(data)) return [];
+    return (data as any[]).map((post) => normalizePost(post, mode));
+  }
 }
 
 export async function autocomplete(
@@ -189,21 +266,57 @@ export async function autocomplete(
 ): Promise<AutocompleteItem[]> {
   if (!query.trim()) return [];
 
-  const baseUrl = `${ENDPOINTS[mode].autocomplete}?q=${encodeURIComponent(query)}`;
-  const url = mode === "nsfw" ? withRule34Auth(baseUrl) : baseUrl;
+  let url: string;
+
+  if (isE621Format(mode)) {
+    const searchParams = new URLSearchParams();
+    searchParams.set("search[query]", query);
+    searchParams.set("search[type]", "tag_query");
+    url = `${ENDPOINTS[mode].autocomplete}&${searchParams.toString()}`;
+  } else if (isDanbooruFormat(mode)) {
+    url = `${ENDPOINTS[mode].autocomplete}?q=${encodeURIComponent(query)}`;
+  } else {
+    throw new Error(`Unknown booru mode: ${mode}`);
+  }
+
+  if (requiresAuth(mode)) {
+    const apiKey = mode === "gelbooru" ? getGelbooruKey() : getRule34Key();
+    const userId =
+      mode === "gelbooru" ? getGelbooruUserId() : getRule34UserId();
+    if (apiKey && userId) {
+      const urlObj = new URL(url);
+      urlObj.searchParams.set("api_key", apiKey);
+      urlObj.searchParams.set("user_id", userId);
+      url = urlObj.toString();
+    } else {
+      return [];
+    }
+  }
 
   try {
     const res = await fetchWithCors(url);
     const data = await safeJsonParse<unknown>(res);
-    if (!Array.isArray(data)) return [];
 
-    return (
-      data as Array<{ label?: string; value?: string; post_count?: number }>
-    ).map((item) => ({
-      value: item.value ?? item.label ?? "",
-      label: (item.label ?? item.value ?? "").replace(/_/g, " "),
-      post_count: item.post_count ?? 0,
-    }));
+    if (isE621Format(mode)) {
+      const e621Data = data as {
+        tags?: Array<{ name: string; post_count?: number }>;
+      };
+      if (!Array.isArray(e621Data?.tags)) return [];
+      return e621Data.tags.map((tag) => ({
+        value: tag.name,
+        label: tag.name.replace(/_/g, " "),
+        post_count: tag.post_count ?? 0,
+      }));
+    } else {
+      if (!Array.isArray(data)) return [];
+      return (
+        data as Array<{ label?: string; value?: string; post_count?: number }>
+      ).map((item) => ({
+        value: item.value ?? item.label ?? "",
+        label: (item.label ?? item.value ?? "").replace(/_/g, " "),
+        post_count: item.post_count ?? 0,
+      }));
+    }
   } catch {
     return [];
   }

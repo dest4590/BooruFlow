@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { BooruMode } from "../composables/useSettings";
+import { SOURCE_CATEGORIES } from "../composables/useSettings";
 import BaseModal from "./BaseModal.vue";
 
 const props = defineProps<{ modelValue: BooruMode }>();
@@ -9,16 +10,16 @@ const emit = defineEmits<{ "update:modelValue": [value: BooruMode] }>();
 const confirming = ref(false);
 
 function toggle() {
-  if (props.modelValue === "sfw") {
+  if (SOURCE_CATEGORIES[props.modelValue] === "sfw") {
     confirming.value = true;
   } else {
-    emit("update:modelValue", "sfw");
+    emit("update:modelValue", "safebooru");
   }
 }
 
 function confirm() {
   confirming.value = false;
-  emit("update:modelValue", "nsfw");
+  emit("update:modelValue", "rule34");
 }
 
 function cancel() {
@@ -31,17 +32,17 @@ function cancel() {
     type="button"
     class="group relative inline-flex items-center gap-2.5 h-8 px-3 rounded-full text-xs font-bold leading-none select-none transition-all duration-300 self-center"
     :class="
-      modelValue === 'nsfw'
+      SOURCE_CATEGORIES[modelValue] === 'nsfw'
         ? 'bg-app-bg-3 border border-app-border-deep text-app-text shadow-sm'
         : 'bg-transparent border border-app-border text-app-text-dim hover:border-app-text-muted hover:text-app-text'
     "
-    :title="modelValue === 'sfw' ? 'Enable NSFW mode' : 'Switch to SFW mode'"
+    :title="SOURCE_CATEGORIES[modelValue] === 'sfw' ? 'Enable NSFW mode' : 'Switch to SFW mode'"
     @click="toggle"
   >
     <div
       class="relative w-8 h-4.5 rounded-full transition-all duration-300 shrink-0"
       :class="
-        modelValue === 'nsfw'
+        SOURCE_CATEGORIES[modelValue] === 'nsfw'
           ? 'bg-app-text'
           : 'bg-app-bg-3 border border-app-border'
       "
@@ -49,7 +50,7 @@ function cancel() {
       <div
         class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full transition-transform duration-300"
         :class="
-          modelValue === 'nsfw'
+          SOURCE_CATEGORIES[modelValue] === 'nsfw'
             ? 'translate-x-4 bg-app-bg'
             : 'translate-x-0 bg-app-text-dim'
         "

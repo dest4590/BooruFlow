@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { BooruMode } from "@/composables/useSettings";
+import type { BooruMode } from "../composables/useSettings";
+import { SOURCE_CATEGORIES } from "../composables/useSettings";
 import BaseSegmentedControl from "./BaseSegmentedControl.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { X } from "@lucide/vue";
@@ -183,7 +184,7 @@ onUnmounted(() => document.removeEventListener("keydown", handleKey));
             </div>
 
             <BaseSegmentedControl
-              v-if="mode === 'nsfw'"
+              v-if="SOURCE_CATEGORIES[mode] === 'nsfw'"
               v-model="local.rating"
               label="Content Rating"
               :options="[

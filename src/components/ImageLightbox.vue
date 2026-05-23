@@ -263,12 +263,16 @@ function isCategoryExpanded(category: TagCategory): boolean {
 }
 
 function openTag(tag: string) {
-  const base =
-    props.mode === "nsfw"
-      ? "https://rule34.xxx/index.php?page=post&s=list&tags="
-      : "https://safebooru.org/index.php?page=post&s=list&tags=";
+  const sourceUrlMap: Record<BooruMode, string> = {
+    safebooru: "https://safebooru.org/index.php?page=post&s=list&tags=",
+    rule34: "https://rule34.xxx/index.php?page=post&s=list&tags=",
+    gelbooru: "https://gelbooru.com/index.php?page=post&s=list&tags=",
+    e621: "https://e621.net/posts?tags=",
+  };
+  
+  const baseUrl = sourceUrlMap[props.mode];
   window.open(
-    `${base}${encodeURIComponent(tag)}`,
+    `${baseUrl}${encodeURIComponent(tag)}`,
     "_blank",
     "noopener,noreferrer",
   );
@@ -385,14 +389,14 @@ async function downloadPost() {
         </div>
         <div v-if="currentPost" :class="containerClass" class="relative">
           <img
-            v-if="mediaType === 'image'"
+            v-if="mediaType === 'image' || mediaType === 'gif'"
             :src="currentPost.file_url"
             :alt="`Post #${currentPost.id}`"
             @load="imageLoaded = true"
             :class="[imageLoaded ? 'opacity-100' : 'opacity-0', imageClass]"
           />
           <video
-            v-else-if="mediaType === 'video' || mediaType === 'gif'"
+            v-else-if="mediaType === 'video'"
             :src="currentPost.file_url"
             :class="imageClass"
             autoplay
